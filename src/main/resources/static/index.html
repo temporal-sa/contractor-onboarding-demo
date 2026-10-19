@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Contractor Onboarding | Temporal demo</title>
+<style>
+  :root { --bg:#f5f6fa; --panel:#fff; --ink:#1b1f2a; --muted:#6b7280; --line:#e3e6ee;
+          --blue:#3b6cf6; --green:#1f9d63; --red:#d6453d; --amber:#e08a00; --grey:#c9ced9; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.4 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; align-items:center; gap:14px; padding:14px 22px; background:#14172a; color:#fff; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0 auto 0 0; }
+  .chip { font-size:12px; padding:3px 10px; border-radius:999px; background:#2a2f4a; color:#cfd5ff; }
+  .chip.ok { background:#12432f; color:#8ff0c0; } .chip.bad { background:#5a1d1a; color:#ffb4ae; }
+  main { display:grid; grid-template-columns:360px 1fr; gap:18px; padding:18px 22px; align-items:start; }
+  @media (max-width:1000px) { main { grid-template-columns:1fr; } }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:18px; }
+  h2 { font-size:14px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:0 0 10px; }
+  label { display:block; font-size:12px; color:var(--muted); margin:8px 0 3px; }
+  input, select { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  button { font:inherit; padding:7px 12px; border-radius:6px; border:1px solid var(--blue); background:var(--blue); color:#fff; cursor:pointer; }
+  button.ghost { background:#fff; color:var(--blue); } button.danger { background:#fff; color:var(--red); border-color:var(--red); }
+  button.good { background:var(--green); border-color:var(--green); }
+  button:disabled { opacity:.5; cursor:default; }
+  .hint { font-size:12px; color:var(--muted); margin-top:6px; min-height:1.4em; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .card { border:1px solid var(--line); border-radius:8px; padding:12px; margin-bottom:12px; }
+  .card.risk { border-color:var(--amber); box-shadow:0 0 0 2px #ffe3b0; }
+  .card h3 { margin:0; font-size:16px; } .meta { color:var(--muted); font-size:12px; }
+  .badge { font-size:11px; padding:2px 8px; border-radius:999px; color:#fff; background:var(--blue); }
+  .badge.ONBOARDED { background:var(--green); } .badge.REJECTED { background:var(--red); }
+  .badge.WITHDRAWN { background:#6b7280; } .badge.stale { background:var(--amber); } .badge.risk { background:var(--amber); }
+  .tracker { display:flex; gap:4px; margin:10px 0; }
+  .st { flex:1; text-align:center; font-size:10px; padding:7px 2px; border-radius:5px; background:var(--grey); color:#fff; overflow:hidden; text-overflow:ellipsis; }
+  .st.ACTIVE { background:var(--blue); animation:pulse 1.4s infinite; } .st.COMPLETED { background:var(--green); } .st.FAILED { background:var(--red); }
+  @keyframes pulse { 50% { opacity:.55; } }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:5px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; font-size:12px; }
+  .task { border:1px solid var(--line); border-radius:8px; padding:9px 10px; margin-bottom:8px; }
+  .count { font-variant-numeric:tabular-nums; font-weight:600; }
+  .count.low { color:var(--red); }
+  a { color:var(--blue); text-decoration:none; } a:hover { text-decoration:underline; }
+  details summary { cursor:pointer; color:var(--blue); font-size:13px; }
+  .empty { color:var(--muted); font-size:13px; }
+  .expiring { color:var(--amber); font-weight:600; }
+  .toast { position:fixed; right:18px; bottom:18px; background:#14172a; color:#fff; padding:10px 14px; border-radius:8px; display:none; max-width:360px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Contractor Onboarding</h1>
+  <span class="chip" id="chipNs">namespace</span>
+  <span class="chip" id="chipScale">timescale</span>
+  <span class="chip" id="chipWorker">worker</span>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>Start onboarding</h2>
+      <label for="name">Contractor</label>
+      <input id="name" value="Northwind Plumbing LLC">
+      <label for="trade">Trade</label>
+      <input id="trade" value="Plumbing">
+      <label for="scenario">Scenario</label>
+      <select id="scenario"></select>
+      <div class="hint" id="scenarioHint"></div>
+      <div class="row" style="margin-top:10px"><button id="startBtn">Start</button></div>
+    </section>
+
+    <section>
+      <h2>My tasks</h2>
+      <div id="tasks"><div class="empty">No pending tasks.</div></div>
+    </section>
+
+    <section>
+      <h2>Compliance sweep schedule</h2>
+      <div id="schedule"><div class="empty">Loading...</div></div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Pipeline</h2>
+      <div id="pipeline"><div class="empty">No onboardings yet. Start one on the left.</div></div>
+    </section>
+    <section>
+      <h2>Contractor registry (coverage expiry)</h2>
+      <div id="registry"><div class="empty">Loading...</div></div>
+    </section>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const HINTS = {
+  HAPPY_PATH: "Everything passes. You approve the human steps.",
+  SLOW_APPROVER: "Screening is flagged and nobody acts, so the SLA escalates twice.",
+  BAD_LICENSE: "License fails. Correction requested, then rejected.",
+  LAPSED_INSURANCE: "Insurance lapsed. Submit a correction and the flow continues.",
+  HIGH_RISK: "Risk score is high, so manual risk review is required.",
+  FLAKY_VENDORS: "Vendor calls fail transiently. Watch retries in the Temporal UI.",
+  SLOW_BANKING: "Bank verification runs about 20 seconds. Kill the worker during it.",
+  SCREENING_FAIL: "Hard screening failure ends in REJECTED."
+};
+const STAGE_LABEL = { INTAKE:"Intake", SCREENING:"Screen", LICENSE:"License", INSURANCE:"Insure", RISK:"Risk", BANKING:"Bank/AP", CONTRACTING:"Contract", ONBOARDING:"Onboard" };
+const S = { config:null, onboardings:[], schedule:null, registry:[], open:new Set() };
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.style.display = "block"; setTimeout(() => t.style.display = "none", 3500); }
+async function api(method, url, body) {
+  const r = await fetch(url, { method, headers:{ "Content-Type":"application/json" }, body: body ? JSON.stringify(body) : undefined });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || r.statusText);
+  return data;
+}
+async function act(fn, okMsg) { try { await fn(); if (okMsg) toast(okMsg); await refresh(); } catch (e) { toast("Error: " + e.message); } }
+const tui = path => `${S.config.uiUrl}/namespaces/${encodeURIComponent(S.config.namespace)}/${path}`;
+function daysUntil(d) { return Math.round((new Date(d + "T00:00:00") - new Date().setHours(0,0,0,0)) / 86400000); }
+function fmtTime(iso) { return iso ? new Date(iso).toLocaleTimeString() : ""; }
+
+// ---------------------------------------------------------------- start panel
+$("scenario").addEventListener("change", () => $("scenarioHint").textContent = HINTS[$("scenario").value] || "");
+$("startBtn").addEventListener("click", () => act(async () => {
+  const r = await api("POST", "/api/onboardings", { contractorName:$("name").value, trade:$("trade").value, scenario:$("scenario").value });
+  toast("Started " + r.onboardingId);
+}));
+
+// ---------------------------------------------------------------- tasks
+function renderTasks() {
+  const rows = [];
+  for (const o of S.onboardings) {
+    if (o.status !== "IN_PROGRESS") continue;
+    for (const s of o.stages) {
+      if (!s.waitingFor) continue;
+      let buttons = "";
+      if (s.waitingFor === "DECISION") {
+        buttons = `<button class="good" onclick="decide('${o.onboardingId}','${s.name}','APPROVE')">Approve</button>
+                   <button class="danger" onclick="decide('${o.onboardingId}','${s.name}','REJECT')">Reject</button>`;
+      } else if (s.waitingFor === "CORRECTION") {
+        buttons = `<button onclick="correct('${o.onboardingId}','${s.name}')">Submit correction</button>`;
+      } else if (s.waitingFor === "SIGNATURE") {
+        buttons = `<button class="good" onclick="sign('${o.onboardingId}')">Sign contract</button>`;
+      }
+      const esc1 = s.escalationLevel > 0 ? ` <span class="badge risk">escalation ${s.escalationLevel}</span>` : "";
+      rows.push(`<div class="task">
+        <div><strong>${esc(o.contractorName)}</strong> <span class="meta">${esc(o.onboardingId)}</span></div>
+        <div class="meta">${esc(STAGE_LABEL[s.name])} · ${esc(s.ownerTeam)} · assigned to ${esc(s.assignee)}${esc1}</div>
+        <div class="meta">SLA <span class="count" data-deadline="${s.slaDeadline}"></span></div>
+        <div class="row" style="margin-top:6px">${buttons}</div></div>`);
+    }
+  }
+  $("tasks").innerHTML = rows.length ? rows.join("") : '<div class="empty">No pending tasks.</div>';
+}
+const decide = (id, stage, decision) => act(() => api("POST", `/api/onboardings/${id}/decision`, { stage, decision, approver:"demo-user" }), decision + " sent");
+const correct = (id, stage) => act(() => api("POST", `/api/onboardings/${id}/correction`, { stage }), "Correction sent");
+const sign = id => act(() => api("POST", `/api/onboardings/${id}/sign`, { signer:"contractor" }), "Signature sent");
+const withdraw = id => act(() => api("POST", `/api/onboardings/${id}/withdraw`, { reason:"Withdrawn from demo UI" }), "Withdraw sent");
+
+// ---------------------------------------------------------------- pipeline
+function renderPipeline() {
+  if (!S.onboardings.length) { $("pipeline").innerHTML = '<div class="empty">No onboardings yet. Start one on the left.</div>'; return; }
+  $("pipeline").innerHTML = S.onboardings.map(o => {
+    const tracker = o.stages.map(s => `<div class="st ${s.status}" title="${esc(s.name)} · ${esc(s.ownerTeam)} · ${esc(s.assignee)}${s.outcome ? " · " + esc(s.outcome) : ""}">${STAGE_LABEL[s.name]}</div>`).join("");
+    const rows = o.stages.map(s => `<tr><td>${esc(STAGE_LABEL[s.name])}</td><td>${esc(s.ownerTeam)}</td><td>${esc(s.assignee)}</td><td>${s.escalationLevel || ""}</td><td>${esc(s.status)}</td><td>${esc(s.outcome)}</td></tr>`).join("");
+    const hist = o.history.slice().reverse().slice(0, 25).map(h => `<tr><td>${new Date(h.timestamp).toLocaleTimeString()}</td><td>${esc(STAGE_LABEL[h.stage] || h.stage)}</td><td>${esc(h.event)}</td><td>${esc(h.detail)}</td></tr>`).join("");
+    return `<div class="card ${o.atRisk ? "risk" : ""}">
+      <div class="row"><h3>${esc(o.contractorName)}</h3><span class="badge ${o.status}">${esc(o.status)}</span>
+        ${o.stale ? '<span class="badge stale">worker unreachable, showing last known state</span>' : ""}
+        ${o.atRisk ? '<span class="badge risk">at risk</span>' : ""}
+        <span style="margin-left:auto" class="row">
+          <a href="${tui("workflows/" + encodeURIComponent(o.onboardingId))}" target="_blank">Open in Temporal UI</a>
+          ${o.status === "IN_PROGRESS" ? `<button class="danger" onclick="withdraw('${o.onboardingId}')">Withdraw</button>` : ""}</span></div>
+      <div class="meta">${esc(o.onboardingId)} · ${esc(o.trade)} · ${esc(o.scenario)} · last activity ran on ${esc(o.lastWorker || "n/a")}</div>
+      <div class="tracker">${tracker}</div>
+      <details data-id="${esc(o.onboardingId)}" ${S.open.has(o.onboardingId) ? "open" : ""}><summary>Stages and history</summary>
+        <table style="margin-top:8px"><tr><th>Stage</th><th>Team</th><th>Assignee</th><th>Esc.</th><th>Status</th><th>Outcome</th></tr>${rows}</table>
+        <table style="margin-top:10px"><tr><th>Time</th><th>Stage</th><th>Event</th><th>Detail</th></tr>${hist}</table>
+      </details></div>`;
+  }).join("");
+}
+document.addEventListener("toggle", e => {
+  const id = e.target.dataset && e.target.dataset.id;
+  if (!id) return;
+  if (e.target.open) S.open.add(id); else S.open.delete(id);
+}, true);
+
+// ---------------------------------------------------------------- schedule
+function renderSchedule() {
+  const s = S.schedule;
+  if (!s) return;
+  if (!s.exists) { $("schedule").innerHTML = `<div class="empty">Schedule not found.</div><div class="row" style="margin-top:8px"><button onclick="schedReset()">Create schedule</button></div>`; return; }
+  const next = s.nextRuns && s.nextRuns[0];
+  const last = s.recentRuns && s.recentRuns[0];
+  const sum = last && last.summary;
+  const runs = (s.recentRuns || []).map(r => `<tr><td>${fmtTime(r.scheduledAt)}</td><td>${r.workflowId ? `<a target="_blank" href="${tui("workflows/" + encodeURIComponent(r.workflowId))}">${esc(r.workflowId.slice(-24))}</a>` : ""}</td></tr>`).join("");
+  $("schedule").innerHTML = `
+    <div class="row"><span class="badge ${s.paused ? "WITHDRAWN" : "ONBOARDED"}">${s.paused ? "PAUSED" : "RUNNING"}</span>
+      <a target="_blank" href="${tui("schedules/" + encodeURIComponent(s.id))}">Open in Temporal UI</a></div>
+    <div class="meta" style="margin-top:6px">Every ${s.intervalSeconds}s at demo speed (real cadence ${esc(s.realInterval)}) · overlap policy ${esc(s.overlapPolicy)} · ${s.numActions} runs</div>
+    <div style="margin-top:6px">${s.paused
+      ? `Next run: <strong>paused</strong> <span class="meta">(Trigger now runs one sweep, Resume restarts the cadence)</span>`
+      : `Next run in <span class="count" data-deadline-iso="${esc(next || "")}"></span>`}</div>
+    <div class="meta" style="margin-top:6px">Last sweep: ${sum ? `${sum.expiring} expiring, ${sum.started} renewals started, ${sum.alreadyOpen} already open` : last ? "running or not yet available" : "no runs yet"}</div>
+    <div class="row" style="margin:10px 0">
+      <button onclick="schedTrigger()">Trigger now</button>
+      <button class="ghost" onclick="${s.paused ? "schedResume()" : "schedPause()"}">${s.paused ? "Resume" : "Pause"}</button>
+      <button class="ghost" onclick="schedReset()">Reset</button></div>
+    ${runs ? `<table><tr><th>Scheduled</th><th>Sweep workflow</th></tr>${runs}</table>` : ""}`;
+}
+const schedTrigger = () => act(() => api("POST", "/api/schedule/trigger"), "Sweep triggered");
+// Bumped around each pause/resume so a poll that started before the click cannot repaint the old state.
+let schedVersion = 0;
+function schedSetPaused(paused, path, okMsg) {
+  schedVersion++;
+  S.schedule.paused = paused;
+  renderSchedule();
+  return act(async () => { await api("POST", path); schedVersion++; }, okMsg);
+}
+const schedPause = () => schedSetPaused(true, "/api/schedule/pause", "Schedule paused");
+const schedResume = () => schedSetPaused(false, "/api/schedule/resume", "Schedule resumed");
+const schedReset = () => act(() => api("POST", "/api/schedule/reset"), "Schedule recreated");
+
+// ---------------------------------------------------------------- registry
+function renderRegistry() {
+  if (!S.registry.length) { $("registry").innerHTML = '<div class="empty">Registry is empty.</div>'; return; }
+  const cell = (c, type, date, renewal) => {
+    const d = daysUntil(date);
+    const hot = d <= S.config.windowDays;
+    const open = renewal && renewal !== "RENEWED" && renewal !== "SUSPENDED";
+    return `<td><span class="${hot ? "expiring" : ""}">${esc(date)} (${d}d)</span>
+      ${renewal ? `<div class="meta">renewal: ${esc(renewal)}</div>` : ""}
+      ${open ? `<button class="ghost" style="margin-top:4px" onclick="renew('${c.id}','${type}')">Renew</button>` : ""}</td>`;
+  };
+  $("registry").innerHTML = `<table><tr><th>Contractor</th><th>Trade</th><th>Status</th><th>Insurance expires</th><th>License expires</th></tr>` +
+    S.registry.map(c => `<tr><td><strong>${esc(c.name)}</strong><div class="meta">${esc(c.id)}</div></td><td>${esc(c.trade)}</td>
+      <td><span class="badge ${c.status === "ACTIVE" ? "ONBOARDED" : "REJECTED"}">${esc(c.status)}</span></td>
+      ${cell(c, "INSURANCE", c.insuranceExpiry, c.insuranceRenewal)}${cell(c, "LICENSE", c.licenseExpiry, c.licenseRenewal)}</tr>`).join("") + `</table>`;
+}
+const renew = (id, type) => act(() => api("POST", `/api/registry/${id}/renew`, { coverageType:type }), "Renewal submitted");
+
+// ---------------------------------------------------------------- polling
+function renderChips() {
+  const c = S.config;
+  $("chipNs").textContent = "namespace: " + c.namespace;
+  $("chipScale").textContent = "timescale: x" + c.timescale + (c.timescale > 1 ? " (1 day = " + Math.round(86400 / c.timescale) + "s)" : "");
+  const w = $("chipWorker");
+  const n = c.recentPollers;
+  w.className = "chip " + (n > 0 ? "ok" : n === 0 ? "bad" : "");
+  w.textContent = n > 0 ? "worker: online" : n === 0 ? "worker: offline" : "worker: unknown";
+}
+function tickCountdowns() {
+  document.querySelectorAll("[data-deadline]").forEach(el => {
+    const ms = Number(el.dataset.deadline) - Date.now();
+    el.textContent = ms > 0 ? Math.ceil(ms / 1000) + "s" : "expired";
+    el.classList.toggle("low", ms < 8000);
+  });
+  document.querySelectorAll("[data-deadline-iso]").forEach(el => {
+    if (!el.dataset.deadlineIso) { el.textContent = "n/a"; return; }
+    const ms = new Date(el.dataset.deadlineIso) - Date.now();
+    el.textContent = ms > 0 ? Math.ceil(ms / 1000) + "s" : "due";
+  });
+}
+async function refresh() {
+  const v = schedVersion;
+  const [cfg, onb, sch, reg] = await Promise.allSettled([
+    api("GET", "/api/config"), api("GET", "/api/onboardings"), api("GET", "/api/schedule"), api("GET", "/api/registry")]);
+  if (cfg.status === "fulfilled") {
+    const first = !S.config; S.config = cfg.value;
+    if (first) { $("scenario").innerHTML = S.config.scenarios.map(x => `<option>${x}</option>`).join(""); $("scenarioHint").textContent = HINTS.HAPPY_PATH; }
+    renderChips();
+  }
+  if (!S.config) return;
+  if (onb.status === "fulfilled") { S.onboardings = onb.value; renderPipeline(); renderTasks(); }
+  if (sch.status === "fulfilled" && v === schedVersion) { S.schedule = sch.value; renderSchedule(); }
+  if (reg.status === "fulfilled") { S.registry = reg.value; renderRegistry(); }
+  tickCountdowns();
+}
+async function loop() { try { await refresh(); } catch (e) {} setTimeout(loop, 2000); }
+setInterval(tickCountdowns, 500);
+loop();
+</script>
+</body>
+</html>

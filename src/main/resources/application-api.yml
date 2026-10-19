@@ -1,0 +1,4 @@
+app:
+  role: api
+server:
+  port: ${PORT:8080}

@@ -1,0 +1,19 @@
+# Connection settings (address, namespace, API key, TLS) are not here: TemporalConfig loads them
+# with Temporal environment configuration, so the same build runs against a local dev server or
+# Temporal Cloud with no code change.
+temporal:
+  task-queue: ${TEMPORAL_TASK_QUEUE:contractor-onboarding}
+  ui-url: ${TEMPORAL_UI_URL:http://localhost:8233}
+
+demo:
+  # Divides SLA durations and the sweep interval. 4320 means one day passes in about 20 seconds.
+  timescale: ${DEMO_TIMESCALE:1}
+  sweep-interval: ${SWEEP_INTERVAL:PT24H}
+  sweep-expiry-window-days: ${SWEEP_EXPIRY_WINDOW_DAYS:30}
+  sweep-start-paused: ${SWEEP_START_PAUSED:false}
+  registry-path: ${REGISTRY_PATH:./data/registry.json}
+  activity-delay-ms: ${ACTIVITY_DELAY_MS:800}
+
+spring:
+  main:
+    banner-mode: off

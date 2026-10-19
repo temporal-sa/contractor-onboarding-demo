@@ -1,0 +1,5 @@
+app:
+  role: worker
+spring:
+  main:
+    web-application-type: none
