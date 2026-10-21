@@ -3,3 +3,15 @@ app:
 spring:
   main:
     web-application-type: none
+  temporal:
+    # Hosts all workflows and activities on a single task queue. The api profile defines no
+    # workers, so only this process polls.
+    workers:
+      - task-queue: ${temporal.task-queue}
+        workflow-classes:
+          - com.example.onboarding.workflow.ContractorOnboardingWorkflowImpl
+          - com.example.onboarding.workflow.ComplianceSweepWorkflowImpl
+          - com.example.onboarding.workflow.CoverageRenewalWorkflowImpl
+        activity-beans:
+          - onboardingActivitiesImpl
+          - complianceActivitiesImpl

@@ -10,8 +10,13 @@ import java.net.InetAddress;
 import java.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
 
 /** Simulated integrations. Behavior is driven by the scenario carried in the request. */
+@Component
+@ConditionalOnProperty(name = "app.role", havingValue = "worker")
 public class OnboardingActivitiesImpl implements OnboardingActivities {
 
   private static final Logger log = LoggerFactory.getLogger(OnboardingActivitiesImpl.class);
@@ -19,7 +24,8 @@ public class OnboardingActivitiesImpl implements OnboardingActivities {
   private final ContractorRegistry registry;
   private final long delayMs;
 
-  public OnboardingActivitiesImpl(ContractorRegistry registry, long delayMs) {
+  public OnboardingActivitiesImpl(
+      ContractorRegistry registry, @Value("${demo.activity-delay-ms}") long delayMs) {
     this.registry = registry;
     this.delayMs = delayMs;
   }
