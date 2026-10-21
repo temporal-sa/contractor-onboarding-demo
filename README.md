@@ -1,6 +1,6 @@
 # Contractor Onboarding: Temporal demo
 
-Java, Spring Boot, Temporal Java SDK. One jar, two processes: an API with a web UI, and a worker you can kill on stage.
+Java, Spring Boot, Temporal Java SDK via the Temporal Spring Boot starter. One jar, two processes: an API with a web UI, and a worker you can kill on stage.
 
 This is a demo, not a reference integration. Every external system is simulated: activities log instead of calling
 real services, and the contractor registry is a local JSON file.
@@ -12,7 +12,7 @@ real services, and the contractor registry is a local JSON file.
 - [Temporal CLI](https://docs.temporal.io/cli) for the local dev server (`temporal server start-dev`)
 - macOS or Linux. The shell scripts use bash and `kill -9`; on Windows, run them under WSL.
 
-Tested with Java 25, Maven 3.9.16, Temporal CLI 1.9.1 (Server 1.32.0), Temporal Java SDK 1.40.0, and Spring Boot 3.3.5.
+Tested with Java 25, Maven 3.9.16, Temporal CLI 1.9.1 (Server 1.32.0), Temporal Java SDK and Spring Boot starter 1.40.0, and Spring Boot 3.3.5.
 
 ## Build
 
@@ -37,10 +37,10 @@ until you press Resume or Trigger now. Run `SWEEP_START_PAUSED=false ./run-api.s
 
 ## Connecting to Temporal
 
-Connection settings use [Temporal environment configuration](https://docs.temporal.io/develop/environment-configuration),
-the same `TEMPORAL_*` variables and `temporal.toml` profiles as the Temporal CLI and the other SDKs. With nothing set,
-the app connects to `localhost:7233`, namespace `default`. Each process logs the address, namespace, and auth mode it
-uses at startup; check that line if a connection setting seems to be ignored.
+The Temporal Spring Boot starter builds the client, schedule client, and workers from the `spring.temporal`
+properties in `application.yml`. Those properties read the same `TEMPORAL_*` variables as the Temporal CLI. With
+nothing set, the app connects to `localhost:7233`, namespace `default`. Each process logs the address, namespace, and
+auth mode it uses at startup; check that line if a connection setting seems to be ignored.
 
 ### Temporal Cloud
 
@@ -55,43 +55,28 @@ export TEMPORAL_API_KEY=<api key>                               # or the two mTL
 export TEMPORAL_UI_URL=https://cloud.temporal.io
 ```
 
-Keep API keys and certificates out of the repository. Export them in your shell, keep them in a `temporal.toml`
-profile outside the repo, or load them from a secrets manager; never commit them to a script or config file.
+An API key turns on TLS automatically. When `TEMPORAL_TLS_CLIENT_CERT_PATH` is set, the run scripts also activate the
+`mtls` Spring profile (`application-mtls.yml`), which requires both certificate paths. If you run the jar yourself, add
+it to the profiles: `--spring.profiles.active=worker,mtls`.
 
-### Configuration profiles
+Keep API keys and certificates out of the repository. Export them in your shell or load them from a secrets manager;
+never commit them to a script or config file.
 
-Instead of exporting variables, you can keep connections as profiles in a TOML file and choose one per run:
-
-```toml
-[profile.cloud]
-address = "<namespace>.<account-id>.tmprl.cloud:7233"
-namespace = "<namespace>.<account-id>"
-api_key = "<api key>"
-```
-
-```bash
-TEMPORAL_PROFILE=cloud ./run-worker.sh
-TEMPORAL_PROFILE=cloud ./run-api.sh
-```
-
-The file is read from `TEMPORAL_CONFIG_FILE`, or from the platform default (`~/.config/temporalio/temporal.toml` on
-Linux, `~/Library/Application Support/temporalio/temporal.toml` on macOS). Environment variables override values from
-the file. If that file has a `default` profile, it is loaded even when `TEMPORAL_PROFILE` is not set, so a default
-profile that points at Temporal Cloud also redirects a "local" run.
+Only the variables listed below are read. Temporal environment configuration files (`temporal.toml`,
+`TEMPORAL_PROFILE`) and other `TEMPORAL_*` variables such as `TEMPORAL_TLS` or `TEMPORAL_GRPC_META_*` are not used.
+Any other starter setting can be supplied as a `spring.temporal.*` property or its `SPRING_TEMPORAL_*` environment
+variable.
 
 ## Environment variables
 
-Connection (see [the full list](https://docs.temporal.io/references/client-environment-configuration)):
+Connection:
 
 | Variable | Default | Purpose |
 |---|---|---|
 | TEMPORAL_ADDRESS | localhost:7233 | Frontend address |
 | TEMPORAL_NAMESPACE | default | Namespace |
 | TEMPORAL_API_KEY | empty | API key auth (enables TLS) |
-| TEMPORAL_TLS | false | TLS without client certs |
-| TEMPORAL_TLS_CLIENT_CERT_PATH, TEMPORAL_TLS_CLIENT_KEY_PATH | empty | mTLS auth (`..._DATA` variants take PEM inline) |
-| TEMPORAL_PROFILE | default | Profile to load from the config file |
-| TEMPORAL_CONFIG_FILE | platform default | Path to `temporal.toml` |
+| TEMPORAL_TLS_CLIENT_CERT_PATH, TEMPORAL_TLS_CLIENT_KEY_PATH | empty | mTLS auth (the run scripts then activate the `mtls` profile) |
 
 Demo:
 
@@ -158,7 +143,7 @@ activity/   simulated integrations, scenario driven
 schedule/   SweepScheduleService (create, describe, trigger, pause, resume, reset)
 registry/   file-backed simulated contractor system of record
 api/        REST controller consumed by static/index.html
-worker/     worker process bootstrap
+config/     customizers for what the spring.temporal properties cannot set (query timeout, client identity)
 ```
 
 ## Design notes

@@ -19,7 +19,6 @@
 
   <properties>
     <java.version>17</java.version>
-    <!-- 1.32.0 or newer: temporal-envconfig first shipped in 1.32.0. -->
     <temporal.version>1.40.0</temporal.version>
   </properties>
 
@@ -30,12 +29,7 @@
     </dependency>
     <dependency>
       <groupId>io.temporal</groupId>
-      <artifactId>temporal-sdk</artifactId>
-      <version>${temporal.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.temporal</groupId>
-      <artifactId>temporal-envconfig</artifactId>
+      <artifactId>temporal-spring-boot-starter</artifactId>
       <version>${temporal.version}</version>
     </dependency>
   </dependencies>

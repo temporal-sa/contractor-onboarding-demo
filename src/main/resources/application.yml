@@ -1,6 +1,15 @@
-# Connection settings (address, namespace, API key, TLS) are not here: TemporalConfig loads them
-# with Temporal environment configuration, so the same build runs against a local dev server or
-# Temporal Cloud with no code change.
+# Connection settings come from the same TEMPORAL_* variables the Temporal CLI uses, so the same
+# build runs against a local dev server or Temporal Cloud with no code change. An API key turns on
+# TLS automatically. For mTLS, also activate the mtls profile (see application-mtls.yml).
+spring:
+  main:
+    banner-mode: off
+  temporal:
+    connection:
+      target: ${TEMPORAL_ADDRESS:localhost:7233}
+      api-key: ${TEMPORAL_API_KEY:}
+    namespace: ${TEMPORAL_NAMESPACE:default}
+
 temporal:
   task-queue: ${TEMPORAL_TASK_QUEUE:contractor-onboarding}
   ui-url: ${TEMPORAL_UI_URL:http://localhost:8233}
@@ -13,7 +22,3 @@ demo:
   sweep-start-paused: ${SWEEP_START_PAUSED:false}
   registry-path: ${REGISTRY_PATH:./data/registry.json}
   activity-delay-ms: ${ACTIVITY_DELAY_MS:800}
-
-spring:
-  main:
-    banner-mode: off
